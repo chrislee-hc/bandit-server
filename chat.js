@@ -65,6 +65,7 @@ class Connection {
   handleWord([word, username]) {
     if (word.length < 3) {
       this.socket.emit("wordResponse", false);
+      return;
     }
     let valid;
     word = word.toLowerCase();
