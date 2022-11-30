@@ -27,6 +27,7 @@ let tilesRemaining = initTilesRemaining();
 let wordLists = {};
 let usernames = [];
 let current_player = 0;
+let events = [];
 
 class Connection {
   constructor(io, socket) {
@@ -58,11 +59,13 @@ class Connection {
       tilesRemaining.substring(0, idx) + tilesRemaining.substring(idx + 1);
     this.io.sockets.emit("updateFlippedTiles", flippedTiles);
     this.io.sockets.emit("numTilesUpdate", tilesRemaining.length);
-    this.io.sockets.emit("event", {
+    let event = {
       eventType: "flip",
       agent: usernames[current_player],
       tile: tile,
-    });
+    };
+    events = [...events, event];
+    this.io.sockets.emit("event", event);
 
     current_player = (current_player + 1) % usernames.length;
     this.io.sockets.emit("currentPlayer", usernames[current_player]);
@@ -100,6 +103,14 @@ class Connection {
       }
       this.socket.emit("wordResponse", true);
       this.io.sockets.emit("updateFlippedTiles", flippedTiles);
+      let event = {
+        eventType: "word",
+        agent: this.username,
+        word: word,
+        steal: false,
+      };
+      events = [...events, event];
+      this.io.sockets.emit("event", event);
     } else {
       let stealFrom = -1;
       for (let stealUsername in wordLists) {
@@ -160,6 +171,17 @@ class Connection {
 
             this.socket.emit("wordResponse", true);
             this.io.sockets.emit("updateFlippedTiles", flippedTiles);
+
+            let event = {
+              eventType: "word",
+              agent: this.username,
+              word: word,
+              steal: true,
+              stealFrom: stealUsername,
+              stealWord: curWord,
+            };
+            events = [...events, event];
+            this.io.sockets.emit("event", event);
             break;
           }
         }
@@ -187,6 +209,7 @@ class Connection {
     tilesRemaining = initTilesRemaining();
     current_player = 0;
     usernames = [];
+    events = [];
     this.io.sockets.emit("updateFlippedTiles", flippedTiles);
     this.io.sockets.emit("numTilesUpdate", tilesRemaining.length);
     this.io.sockets.emit("updateWordLists", wordLists);
@@ -207,6 +230,15 @@ class Connection {
     this.socket.emit("numTilesUpdate", tilesRemaining.length);
     this.socket.emit("updateFlippedTiles", flippedTiles);
     this.socket.emit("currentPlayer", usernames[current_player]);
+    this.socket.emit("allEvents", events);
+
+    let event = {
+      eventType: "join",
+      agent: username,
+    };
+    events = [...events, event];
+    this.io.sockets.emit("event", event);
+
     console.log(username + " logged in");
   }
 
@@ -241,15 +273,27 @@ class Connection {
 
   disconnect() {
     console.log(this.username + " disconnected");
+    if (this.username === usernames[current_player]) {
+      current_player++;
+    }
     for (let i = 0; i < usernames.length; i++) {
       if (this.username == usernames[i]) {
         usernames.splice(i, 1);
         break;
       }
     }
-    if (this.username === usernames[current_player]) {
-      current_player = (current_player + 1) % usernames.length;
+    if (current_player >= usernames.length) {
+      current_player--;
     }
+    this.io.sockets.emit("currentPlayer", usernames[current_player]);
+
+    let event = {
+      eventType: "disconnect",
+      agent: this.username,
+    };
+    events = [...events, event];
+    this.io.sockets.emit("event", event);
+
     users.delete(this.socket);
   }
 }
