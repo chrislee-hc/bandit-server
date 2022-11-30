@@ -34,7 +34,7 @@ class Connection {
     this.io = io;
 
     // connection messages
-    socket.emit("serverRestart");
+    this.handleStart();
 
     socket.on("getMessages", () => this.getMessages());
     socket.on("message", (value) => this.handleMessage(value));
@@ -52,11 +52,17 @@ class Connection {
 
   handleFlip() {
     let idx = Math.floor(Math.random() * tilesRemaining.length);
-    flippedTiles = [...flippedTiles, tilesRemaining[idx]];
+    let tile = tilesRemaining[idx];
+    flippedTiles = [...flippedTiles, tile];
     tilesRemaining =
       tilesRemaining.substring(0, idx) + tilesRemaining.substring(idx + 1);
     this.io.sockets.emit("updateFlippedTiles", flippedTiles);
     this.io.sockets.emit("numTilesUpdate", tilesRemaining.length);
+    this.io.sockets.emit("event", {
+      eventType: "flip",
+      agent: usernames[current_player],
+      tile: tile,
+    });
 
     current_player = (current_player + 1) % usernames.length;
     this.io.sockets.emit("currentPlayer", usernames[current_player]);
@@ -202,6 +208,10 @@ class Connection {
     this.socket.emit("updateFlippedTiles", flippedTiles);
     this.socket.emit("currentPlayer", usernames[current_player]);
     console.log(username + " logged in");
+  }
+
+  handleStart() {
+    this.socket.emit("serverRestart");
   }
 
   sendMessage(message) {
