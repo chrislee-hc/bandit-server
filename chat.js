@@ -214,6 +214,7 @@ class Connection {
     this.io.sockets.emit("numTilesUpdate", tilesRemaining.length);
     this.io.sockets.emit("updateWordLists", wordLists);
     this.io.sockets.emit("serverRestart");
+    this.io.sockets.emit("allEvents", events);
   }
 
   handleUsername(username) {
@@ -240,7 +241,6 @@ class Connection {
     this.io.sockets.emit("event", event);
 
     console.log(username + " logged in");
-    console.log(usernames);
   }
 
   handleStart() {
