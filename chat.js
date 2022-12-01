@@ -240,6 +240,7 @@ class Connection {
     this.io.sockets.emit("event", event);
 
     console.log(username + " logged in");
+    console.log(usernames);
   }
 
   handleStart() {
